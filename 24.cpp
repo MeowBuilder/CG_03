@@ -47,7 +47,7 @@ std::vector< glm::vec3 > vertices;
 std::vector< glm::vec2 > uvs;
 std::vector< glm::vec3 > normals;
 
-glm::vec3 cameraPos = { -2.0f,2.0f,-2.0f };
+glm::vec3 cameraPos = { -2.0f,2.0f,2.0f };
 glm::vec3 camera_rotate = { 0.0f,0.0f,0.0f };
 bool camera_rotate_y = false;
 float camera_y_seta = 0.5f;
@@ -56,6 +56,16 @@ glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 bool is_cube = true;
+
+bool light_on = true;
+bool light_rotate = false;
+float light_rotate_angle = 0.0f;
+float light_rotate_speed = 1.0f;  // 양수: 시계 방향, 음수: 반시계 방향
+float light_orbit_radius = 2.0f;  // 공전 반지름
+
+const float LIGHT_DISTANCE_CHANGE = 0.1f;  // 한 번에 변경될 거리
+const float MIN_LIGHT_DISTANCE = 1.0f;     // 최소 거리
+const float MAX_LIGHT_DISTANCE = 5.0f;     // 최대 거리
 
 char* File_To_Buf(const char* file)
 {
@@ -198,70 +208,104 @@ bool Make_Shader_Program() {
 bool Set_VAO() {
 	Load_Object("cube.obj");
 
+	// 큐브 VAO 설정
 	glGenVertexArrays(1, &cube_VAO);
 	glBindVertexArray(cube_VAO);
 
+	// 위치 버퍼
 	glGenBuffers(1, &cube_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &cube_EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
-
+	
 	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(positionAttribute);
 
-	glBindVertexArray(0);
+	// 노말 계산 및 설정
+	std::vector<glm::vec3> calculated_normals(vertices.size(), glm::vec3(0.0f));
+	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
+		unsigned int idx1 = vertexIndices[i];
+		unsigned int idx2 = vertexIndices[i + 1];
+		unsigned int idx3 = vertexIndices[i + 2];
+
+		glm::vec3 v1 = vertices[idx2] - vertices[idx1];
+		glm::vec3 v2 = vertices[idx3] - vertices[idx1];
+		glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
+
+		calculated_normals[idx1] += normal;
+		calculated_normals[idx2] += normal;
+		calculated_normals[idx3] += normal;
+	}
+
+	// 노말 정규화
+	for (auto& normal : calculated_normals) {
+		normal = glm::normalize(normal);
+	}
 
 	glGenBuffers(1, &cube_VBO_n);
 	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO_n);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &cube_EBO_n);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_EBO_n);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, normalIndices.size() * sizeof(unsigned int), &normalIndices[0], GL_STATIC_DRAW);
-
+	glBufferData(GL_ARRAY_BUFFER, calculated_normals.size() * sizeof(glm::vec3), &calculated_normals[0], GL_STATIC_DRAW);
+	
 	GLint normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
 	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(normalAttribute);
 
-	glBindVertexArray(1);
+	// 인덱스 버퍼
+	glGenBuffers(1, &cube_EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
 
+	glBindVertexArray(0);
 
+	// 사면체 설정
 	Load_Object("tetrahedron.obj");
-
+	
 	glGenVertexArrays(1, &tet_VAO);
 	glBindVertexArray(tet_VAO);
 
 	glGenBuffers(1, &tet_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, tet_VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+	
+	positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
+	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(positionAttribute);
+
+	// 사면체 노말 계산
+	calculated_normals.clear();
+	calculated_normals.resize(vertices.size(), glm::vec3(0.0f));
+	
+	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
+		unsigned int idx1 = vertexIndices[i];
+		unsigned int idx2 = vertexIndices[i + 1];
+		unsigned int idx3 = vertexIndices[i + 2];
+
+		glm::vec3 v1 = vertices[idx2] - vertices[idx1];
+		glm::vec3 v2 = vertices[idx3] - vertices[idx1];
+		glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
+
+		calculated_normals[idx1] += normal;
+		calculated_normals[idx2] += normal;
+		calculated_normals[idx3] += normal;
+	}
+
+	for (auto& normal : calculated_normals) {
+		normal = glm::normalize(normal);
+	}
+
+	glGenBuffers(1, &tet_VBO_n);
+	glBindBuffer(GL_ARRAY_BUFFER, tet_VBO_n);
+	glBufferData(GL_ARRAY_BUFFER, calculated_normals.size() * sizeof(glm::vec3), &calculated_normals[0], GL_STATIC_DRAW);
+	
+	normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
+	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(normalAttribute);
 
 	glGenBuffers(1, &tet_EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tet_EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
 
-	positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
-	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(positionAttribute);
-
 	glBindVertexArray(0);
-
-	glGenBuffers(1, &tet_VBO_n);
-	glBindBuffer(GL_ARRAY_BUFFER, tet_VBO_n);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &tet_EBO_n);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tet_EBO_n);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, normalIndices.size() * sizeof(unsigned int), &normalIndices[0], GL_STATIC_DRAW);
-
-	normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
-	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(normalAttribute);
-
-	glBindVertexArray(1);
 
 	return true;
 }
@@ -299,18 +343,15 @@ void Viewport1() {
 	unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightcolor");
 	unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos");
 
-	glUniform3f(lightPosLocation, 0.0, 0.0, 1.5);
-	glUniform3f(lightColorLocation, 0.0, 1.0, 1.0);
-
 	TR = glm::mat4(1.0f);
 	TR = glm::rotate(TR, glm::radians(camera_rotate.y), glm::vec3(0.0, 1.0, 0.0));
 
-	//도향 그리는 파트
+	//도형 그리는 파트
 	if (is_cube)
 	{
 		glBindVertexArray(cube_VAO);
 		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
-		glUniform3f(colorLocation, colors[0].x, colors[0].y, colors[0].z);
+		glUniform3f(colorLocation, 1, 1, 1);
 
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 	}
@@ -318,11 +359,48 @@ void Viewport1() {
 	{
 		glBindVertexArray(tet_VAO);
 		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
-		glUniform3f(colorLocation, colors[0].x, colors[0].y, colors[0].z);
+		glUniform3f(colorLocation, 1, 1, 1);
 
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 	}
 
+	// 조명 위치 계산 (물체 회전과 무관하게)
+	glm::vec3 rotated_light_pos = glm::vec3(
+		light_orbit_radius * cos(glm::radians(light_rotate_angle)),
+		0.0f,
+		light_orbit_radius * sin(glm::radians(light_rotate_angle))
+	);
+	
+	// 공전 궤도 그리기 (물체 회전과 무관하게)
+	const int circle_segments = 100;
+	glBegin(GL_LINE_LOOP);
+	glColor3f(0.5f, 0.5f, 0.5f);  // 회색
+	for (int i = 0; i < circle_segments; i++) {
+		float theta = 2.0f * 3.1415926f * float(i) / float(circle_segments);
+		float x = light_orbit_radius * cosf(theta);
+		float z = light_orbit_radius * sinf(theta);
+		glVertex3f(x, 0.0f, z);
+	}
+	glEnd();
+
+	// 조명 큐브 그리기
+	glBindVertexArray(cube_VAO);
+	glm::mat4 light_TR = glm::mat4(1.0f);
+	light_TR = glm::translate(light_TR, rotated_light_pos);
+	light_TR = glm::scale(light_TR, glm::vec3(0.2f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(light_TR));
+	glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+
+	// 조명 위치 업데이트 (뷰 공간으로 변환)
+	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
+	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
+	if (light_on) {
+		glUniform3f(lightColorLocation, 0.0, 1.0, 1.0);
+	}
+	else {
+		glUniform3f(lightColorLocation, 0.0, 0.0, 0.0);
+	}
 }
 
 GLvoid drawScene()
@@ -350,8 +428,12 @@ GLvoid TimerFunction1(int value)
 	if (camera_rotate_y) {
 		camera_rotate.y += camera_y_seta;
 	}
+	if (light_rotate) {
+		light_rotate_angle += light_rotate_speed;
+		if (light_rotate_angle >= 360.0f) light_rotate_angle -= 360.0f;
+		if (light_rotate_angle < 0.0f) light_rotate_angle += 360.0f;
+	}
 	glutTimerFunc(10, TimerFunction1, 1);
-
 }
 
 GLvoid Keyboard(unsigned char key, int x, int y)
@@ -359,23 +441,40 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	vector<int> new_opnenface = {};
 	switch (key) {
 	case 'y':
-		camera_rotate_y = !camera_rotate_y;
-		camera_y_seta = 1;
-		break;
+			camera_rotate_y = !camera_rotate_y;
+			camera_y_seta = 1;
+			break;
 	case 'Y':
-		camera_rotate_y = !camera_rotate_y;
-		camera_y_seta = -1;
-		break;
+			camera_rotate_y = !camera_rotate_y;
+			camera_y_seta = -1;
+			break;
 	case 'n':
-		is_cube = !is_cube;
-		break;
-	case 'z':
-		break;
-	case 'Z':
-		break;
+			is_cube = !is_cube;
+			break;
+	case 'm':
+			light_on = !light_on;
+			break;
+	case 'r':
+			if (!light_rotate) {
+					light_rotate = true;
+					light_rotate_speed = 1.0f;
+			}
+			else if (light_rotate_speed > 0) {
+					light_rotate_speed = -1.0f;
+			}
+			else {
+					light_rotate = false;
+			}
+			break;
+	case 'z':  // 조명을 가깝게
+			light_orbit_radius = max(light_orbit_radius - LIGHT_DISTANCE_CHANGE, MIN_LIGHT_DISTANCE);
+			break;
+	case 'Z':  // 조명을 멀리
+			light_orbit_radius = min(light_orbit_radius + LIGHT_DISTANCE_CHANGE, MAX_LIGHT_DISTANCE);
+			break;
 	case 'q':
-		glutLeaveMainLoop();
-		break;
+			glutLeaveMainLoop();
+			break;
 	}
 	glutPostRedisplay();
 }

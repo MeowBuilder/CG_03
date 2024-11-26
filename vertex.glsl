@@ -15,11 +15,14 @@ out vec3 passColorAttribute;
 
 void main()
 {
-    gl_Position = projectionTransform * viewTransform * transform * vec4(positionAttribute, 1.0);
-
-    FragPos = vec3(transform * vec4(positionAttribute, 1.0));
-
-    Normal = normalize(mat3(transpose(inverse(transform))) * normalAttribute);
-
+    // 뷰 공간에서의 위치
+    vec4 viewPos = viewTransform * transform * vec4(positionAttribute, 1.0);
+    FragPos = viewPos.xyz;
+    
+    // 뷰 공간에서의 노말
+    Normal = normalize(mat3(viewTransform * transform) * normalAttribute);
+    
+    gl_Position = projectionTransform * viewPos;
+    
     passColorAttribute = colorAttribute;
-};
+}
