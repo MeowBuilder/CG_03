@@ -27,12 +27,4 @@
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Object Include="cube.obj">
-      <Filter>리소스 파일</Filter>
-    </Object>
-    <Object Include="tetrahedron.obj">
-      <Filter>리소스 파일</Filter>
-    </Object>
-  </ItemGroup>
 </Project>
