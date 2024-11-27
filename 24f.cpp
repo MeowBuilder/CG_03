@@ -56,7 +56,6 @@ glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 bool is_cube = true;
-
 bool light_on = true;
 bool light_rotate = false;
 float light_rotate_angle = 0.0f;
