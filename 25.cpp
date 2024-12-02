@@ -434,7 +434,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	vector<int> new_opnenface = {};
 	switch (key) {
 	case 'm':
-		light_color = glm::vec3(0);
+		light_color = glm::vec3(0.0f);
 		break;
 	case 'c':
 		light_color = glm::vec3(rand_color(eng), rand_color(eng), rand_color(eng));

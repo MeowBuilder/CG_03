@@ -19,6 +19,7 @@ const auto seed = seeder.entropy() ? seeder() : time(nullptr);
 mt19937 eng(static_cast<mt19937::result_type>(seed));
 uniform_int_distribution<int> rand_cube(0, 5);
 uniform_int_distribution<int> rand_tet(0, 3);
+uniform_real_distribution<float> rand_color(0.0, 1.0);  // 0.0 ~ 1.0 ì‚¬ì´ì˜ ëœë¤ ì‹¤ìˆ˜
 
 const int WIN_X = 10, WIN_Y = 10;
 const int WIN_W = 800, WIN_H = 800;
@@ -65,8 +66,8 @@ glm::vec3 rotate_arms = { 0.0f,0.0f,0.0f };
 bool rotate_arms_bool = false;
 float rotate_arm_seta = 0.5f;
 
-//Ä«¸Ş¶ó zx
-glm::vec3 cameraPos = { -1.0f,1.0f,1.0f };
+//Ä«Ş¶ zx
+glm::vec3 cameraPos = { 0.0f,1.0f,5.0f };
 glm::vec3 camera_rotate = { 0.0f,0.0f,0.0f };
 bool camera_rotate_y = false;
 float camera_y_seta = 0.5f;
@@ -75,6 +76,14 @@ bool camera_rotate_all = false;
 glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+bool light_rotate = false;
+float light_rotate_angle = 0.0f;
+float light_rotate_speed = 1.0f;
+float light_orbit_radius = 10.0f;  // ê³µì „ ë°˜ì§€ë¦„
+float light_height = 3.0f;        // yì¶• ë†’ì´
+
+glm::vec3 light_color = glm::vec3(1.0f);  // ì¡°ëª… ìƒ‰ìƒ
+
 void set_body(int body_index, glm::mat4* TR);
 
 char* File_To_Buf(const char* file)
@@ -82,7 +91,7 @@ char* File_To_Buf(const char* file)
 	ifstream in(file, ios_base::binary);
 
 	if (!in) {
-		cerr << file << "ÆÄÀÏ ¸øÃ£À½";
+		cerr << file << " ì•ˆ ì—´ë¦¼";
 		exit(1);
 	}
 
@@ -108,7 +117,7 @@ bool  Load_Object(const char* path) {
 
 	ifstream in(path);
 	if (!in) {
-		cerr << path << "ÆÄÀÏ ¸øÃ£À½";
+		cerr << path << " ì•ˆ ì—´ë¦¼";
 		exit(1);
 	}
 
@@ -150,71 +159,71 @@ bool  Load_Object(const char* path) {
 }
 
 bool Make_Shader_Program() {
-	//¼¼ÀÌ´õ ÄÚµå ÆÄÀÏ ºÒ·¯¿À±â
+	//Ì´Úµ Ò·
 	const GLchar* vertexShaderSource = File_To_Buf("vertex.glsl");
 	const GLchar* fragmentShaderSource = File_To_Buf("fragment.glsl");
 
-	//¼¼ÀÌ´õ °´Ã¼ ¸¸µé±â
+	//Ì´Ã¼
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	//¼¼ÀÌ´õ °´Ã¼¿¡ ¼¼ÀÌ´õ ÄÚµå ºÙÀÌ±â
+	//Ì´Ã¼ Ì´Úµ Ì±
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	//¼¼ÀÌ´õ °´Ã¼ ÄÄÆÄÀÏÇÏ±â
+	//Ì´Ã¼ Ï±
 	glCompileShader(vertexShader);
 
 	GLint result;
 	GLchar errorLog[512];
 
-	//¼¼ÀÌ´õ »óÅÂ °¡Á®¿À±â
+	//Ì´
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
 	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-		cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << endl;
+		cerr << "ERROR: vertex shader  " << errorLog << endl;
 		return false;
 	}
 
-	//¼¼ÀÌ´õ °´Ã¼ ¸¸µé±â
+	//Ì´Ã¼
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	//¼¼ÀÌ´õ °´Ã¼¿¡ ¼¼ÀÌ´õ ÄÚµå ºÙÀÌ±â
+	//Ì´Ã¼ Ì´Úµ Ì±
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	//¼¼ÀÌ´õ °´Ã¼ ÄÄÆÄÀÏÇÏ±â
+	//Ì´Ã¼ Ï±
 	glCompileShader(fragmentShader);
-	//¼¼ÀÌ´õ »óÅÂ °¡Á®¿À±â
+	//Ì´
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
 	if (!result)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-		cerr << "ERROR: fragment shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << endl;
+		cerr << "ERROR: fragment shader  " << errorLog << endl;
 		return false;
 	}
 
-	//¼¼ÀÌ´õ ÇÁ·Î±×·¥ »ı¼º
+	//Ì´Î±×·
 	shaderProgramID = glCreateProgram();
-	//¼¼ÀÌ´õ ÇÁ·Î±×·¥¿¡ ¼¼ÀÌ´õ °´Ã¼µéÀ» ºÙÀÌ±â
+	//Ì´Î±×· Ì´Ã¼ Ì±
 	glAttachShader(shaderProgramID, vertexShader);
 	glAttachShader(shaderProgramID, fragmentShader);
-	//¼¼ÀÌ´õ ÇÁ·Î±×·¥ ¸µÅ©
+	//Ì´Î±×· Å©
 	glLinkProgram(shaderProgramID);
 
-	//¼¼ÀÌ´õ °´Ã¼ »èÁ¦ÇÏ±â
+	//Ì´Ã¼ Ï±
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
-	//ÇÁ·Î±×·¥ »óÅÂ °¡Á®¿À±â
+	//Î±×·
 	glGetProgramiv(shaderProgramID, GL_LINK_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(shaderProgramID, 512, NULL, errorLog);
-		cerr << "ERROR: shader program ¿¬°á ½ÇÆĞ\n" << errorLog << endl;
+		cerr << "ERROR: shader program  " << errorLog << endl;
 		return false;
 	}
-	//¼¼ÀÌ´õ ÇÁ·Î±×·¥ È°¼ºÈ­
+	//Ì´Î±×· È°È­
 	glUseProgram(shaderProgramID);
 
 	return true;
 }
 
 bool Set_VAO() {
-	//»ï°¢ÇüÀ» ±¸¼ºÇÏ´Â vertex µ¥ÀÌÅÍ - position°ú color
+	//ï°¢Ï´ vertex  - position color
 
 	Load_Object("cube.obj");
 
@@ -277,58 +286,68 @@ bool Set_VAO() {
 	glBindVertexArray(Line_VAO);
 	glGenBuffers(1, &Line_VBO);
 
-	//¹öÅØ½º ¹è¿­ ¿ÀºêÁ§Æ® (VAO) ÀÌ¸§ »ı¼º
+	//Ø½ Æ® (VAO) Ì¸
 	glGenVertexArrays(1, &triangleVertexArrayObject);
-	//VAO¸¦ ¹ÙÀÎµåÇÑ´Ù.
+	//VAO ÎµÑ´.
 	glBindVertexArray(triangleVertexArrayObject);
 
-	//Vertex Buffer Object(VBO)¸¦ »ı¼ºÇÏ¿© vertex µ¥ÀÌÅÍ¸¦ º¹»çÇÑ´Ù.
+	//Vertex Buffer Object(VBO) Ï¿ vertex Í¸ Ñ´.
 
-	//¹öÅØ½º ¹öÆÛ ¿ÀºêÁ§Æ® (VBO) ÀÌ¸§ »ı¼º
+	//Ø½ Æ® (VBO) Ì¸
 	glGenBuffers(1, &trianglePositionVertexBufferObjectID);
-	//¹öÆÛ ¿ÀºêÁ§Æ®¸¦ ¹ÙÀÎµå ÇÑ´Ù.
+	// Æ® ÎµÑ´.
 	glBindBuffer(GL_ARRAY_BUFFER, trianglePositionVertexBufferObjectID);
-	//¹öÆÛ ¿ÀºêÁ§Æ®ÀÇ µ¥ÀÌÅÍ¸¦ »ı¼º
+	// Æ® Í¸
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
-	//¿¤¸®¸àÆ® ¹öÆÛ ¿ÀºêÁ§Æ® (EBO) ÀÌ¸§ »ı¼º
+	//Æ® Æ® (EBO) Ì¸
 	glGenBuffers(1, &trianglePositionElementBufferObject);
-	//¹öÆÛ ¿ÀºêÁ§Æ®¸¦ ¹ÙÀÎµå ÇÑ´Ù.
+	// Æ® ÎµÑ´.
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, trianglePositionElementBufferObject);
-	//¹öÆÛ ¿ÀºêÁ§Æ®ÀÇ µ¥ÀÌÅÍ¸¦ »ı¼º
+	// Æ® Í¸
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
 
-	//À§Ä¡ °¡Á®¿À±â ÇÔ¼ö
+	//Ä¡ Ô¼
 	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
 	if (positionAttribute == -1) {
-		cerr << "position ¼Ó¼º ¼³Á¤ ½ÇÆĞ" << endl;
+		cerr << "position Ó¼  " << endl;
 		return false;
 	}
-	//¹öÅØ½º ¼Ó¼º µ¥ÀÌÅÍÀÇ ¹è¿­À» Á¤ÀÇ
+	//Ø½ Ó¼  Æ® 
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	//¹öÅØ½º ¼Ó¼º ¹è¿­À» »ç¿ëÇÏµµ·Ï ÇÑ´Ù.
+	//Ø½ Ó¼  Æ® ÏµÑ´.
 	glEnableVertexAttribArray(positionAttribute);
 
-	//Ä®¶ó ¹öÆÛ ¿ÀºêÁ§Æ® (VBO) ÀÌ¸§ »ı¼º
-	glGenBuffers(1, &triangleColorVertexBufferObjectID);
-	//¹öÆÛ ¿ÀºêÁ§Æ®¸¦ ¹ÙÀÎµå ÇÑ´Ù.
-	glBindBuffer(GL_ARRAY_BUFFER, triangleColorVertexBufferObjectID);
-	//¹öÆÛ ¿ÀºêÁ§Æ®ÀÇ µ¥ÀÌÅÍ¸¦ »ı¼º
-	glBufferData(GL_ARRAY_BUFFER, sizeof(color_cube), color_cube, GL_STATIC_DRAW);
+	// ë…¸ë§ ê³„ì‚° ë° ì„¤ì •
+	std::vector<glm::vec3> calculated_normals(vertices.size(), glm::vec3(0.0f));
+	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
+		unsigned int idx1 = vertexIndices[i];
+		unsigned int idx2 = vertexIndices[i + 1];
+		unsigned int idx3 = vertexIndices[i + 2];
 
-	//À§Ä¡ °¡Á®¿À±â ÇÔ¼ö
-	GLint colorAttribute = glGetAttribLocation(shaderProgramID, "colorAttribute");
-	if (colorAttribute == -1) {
-		cerr << "color ¼Ó¼º ¼³Á¤ ½ÇÆĞ" << endl;
-		return false;
+		glm::vec3 v1 = vertices[idx2] - vertices[idx1];
+		glm::vec3 v2 = vertices[idx3] - vertices[idx1];
+		glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
+
+		calculated_normals[idx1] += normal;
+		calculated_normals[idx2] += normal;
+		calculated_normals[idx3] += normal;
 	}
-	//¹öÆÛ ¿ÀºêÁ§Æ®¸¦ ¹ÙÀÎµå ÇÑ´Ù.
-	glBindBuffer(GL_ARRAY_BUFFER, triangleColorVertexBufferObjectID);
-	//¹öÅØ½º ¼Ó¼º µ¥ÀÌÅÍÀÇ ¹è¿­À» Á¤ÀÇ
-	glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	//¹öÅØ½º ¼Ó¼º ¹è¿­À» »ç¿ëÇÏµµ·Ï ÇÑ´Ù.
-	glEnableVertexAttribArray(colorAttribute);
 
+	// ë…¸ë§ ì •ê·œí™”
+	for (auto& normal : calculated_normals) {
+		normal = glm::normalize(normal);
+	}
+
+	// ë…¸ë§ ë²„í¼ ìƒì„± ë° ì„¤ì •
+	GLuint normalVBO;
+	glGenBuffers(1, &normalVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+	glBufferData(GL_ARRAY_BUFFER, calculated_normals.size() * sizeof(glm::vec3), &calculated_normals[0], GL_STATIC_DRAW);
+
+	GLint normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
+	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(normalAttribute);
 
 	glBindVertexArray(0);
 
@@ -381,8 +400,14 @@ GLvoid drawScene()
 		projection = glm::translate(projection, glm::vec3(0.0, 0.0, -10.0));
 	}
 
+	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
 	unsigned int projectionLocation = glGetUniformLocation(shaderProgramID, "projectionTransform");
+	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
+
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
+
+	unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightcolor");
+	unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos");
 
 	glBindVertexArray(Line_VAO);
 
@@ -393,64 +418,85 @@ GLvoid drawScene()
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
-	//ÁÂÇ¥Ãà±×¸®´Â ÆÄÆ®
-	glm::mat4 TR = glm::mat4(1.0f);
-	world_trans(&TR);
-	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
-	glDrawArrays(GL_LINES, 0, line.size() / 3);
+	// ì¡°ëª… ìœ„ì¹˜ ê³„ì‚° (drawScene í•¨ìˆ˜ ë‚´ ë„í˜• ê·¸ë¦¬ê¸° ì „)
+	glm::vec3 rotated_light_pos = glm::vec3(
+		light_orbit_radius * cos(glm::radians(light_rotate_angle)),
+		light_height,
+		light_orbit_radius * sin(glm::radians(light_rotate_angle))
+	);
 
-	//µµÇâ ±×¸®´Â ÆÄÆ®
+	// 
 	glBindVertexArray(triangleVertexArrayObject);
 
-	//¹Ù´Ú
-	TR = glm::mat4(1.0f);
+	//Ù´
+	glm::mat4 TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(0, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 1, 1, 1);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//¾Æ·¡¸öÃ¼
+	//Æ·Ã¼
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(1, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 0, 0, 1);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//À§¸öÃ¼
+	//Ã¼
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(2, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 1, 0, 0);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//¿ŞÂÊÆ÷½Å
+	//
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(3, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 0, 1, 0);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//¿ŞÂÊÆ÷½Å
+	//
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(4, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 0, 1, 0);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//¿ŞÂÊÅ©·¹ÀÎ
+	//Å©
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(5, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 0.5, 0.5, 0);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//¿ŞÂÊÅ©·¹ÀÎ
+	//Å©
 	TR = glm::mat4(1.0f);
 	world_trans(&TR);
 	set_body(6, &TR);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+	glUniform3f(colorLocation, 0.5, 0.5, 0);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+
+	// ì¡°ëª… ê·¸ë¦¬ê¸°
+	glBindVertexArray(triangleVertexArrayObject);
+	glm::mat4 light_TR = glm::mat4(1.0f);
+	light_TR = glm::translate(light_TR, rotated_light_pos);
+	light_TR = glm::scale(light_TR, glm::vec3(0.2f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(light_TR));
+	glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);  // í°ìƒ‰ íë¸Œ
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+
+	// ì¡°ëª… ìœ„ì¹˜ë¥¼ ë·° ê³µê°„ìœ¼ë¡œ ë³€í™˜í•˜ì—¬ ì…°ì´ë”ì— ì „ë‹¬
+	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
+	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
+	glUniform3f(lightColorLocation, light_color.x, light_color.y, light_color.z);
 
 	glutSwapBuffers();
 }
@@ -459,37 +505,37 @@ void set_body(int body_index, glm::mat4* TR) {
 	*TR = glm::translate(*TR, trans_down_body);
 	switch (body_index)
 	{
-	case 0://¹Ù´Ú
+	case 0://Ù´
 		*TR = glm::translate(*TR, glm::vec3(0.0f, -0.5f, 0.0f));
 		*TR = glm::scale(*TR, glm::vec3(50.0f, 0.5f, 50.0f));
 		break;
-	case 1://¾Æ·¡¸öÃ¼
+	case 1://Æ·Ã¼
 		*TR = glm::translate(*TR, glm::vec3(0.0f, 0.0f, 0.0f));
 		*TR = glm::scale(*TR, glm::vec3(1.5f, 0.5f, 1.5f));
 		break;
-	case 2://À§¸öÃ¼
+	case 2://Ã¼
 		*TR = glm::rotate(*TR, glm::radians(rotate_mid_body.y), glm::vec3(0.0, 1.0, 0.0));
 		*TR = glm::translate(*TR, glm::vec3(0.0f, 0.375f, 0.0f));
 		*TR = glm::scale(*TR, glm::vec3(0.75f, 0.25f, 0.75f));
 		break;
-	case 3://¿ŞÂÊÆ÷½Å
+	case 3://
 		*TR = glm::rotate(*TR, glm::radians(-rotate_barrel_body.y), glm::vec3(0.0, 1.0, 0.0));
 		*TR = glm::translate(*TR, glm::vec3(-barrel_trans_mid, 0.0f, 1.0f));
 		*TR = glm::scale(*TR, glm::vec3(0.25, 0.1, 0.75f));
 		break;
-	case 4://¿À¸¥ÂÊÆ÷½Å
+	case 4://
 		*TR = glm::rotate(*TR, glm::radians(rotate_barrel_body.y), glm::vec3(0.0, 1.0, 0.0));
 		*TR = glm::translate(*TR, glm::vec3(barrel_trans_mid, 0.0f, 1.0f));
 		*TR = glm::scale(*TR, glm::vec3(0.25, 0.1, 0.75f));
 		break;
-	case 5://¿ŞÂÊÅ©·¹ÀÎ
+	case 5://Å©
 		*TR = glm::rotate(*TR, glm::radians(rotate_mid_body.y), glm::vec3(0.0, 1.0, 0.0));
 		*TR = glm::translate(*TR, glm::vec3(0.2f, 0.25f, 0.0f));
 		*TR = glm::rotate(*TR, glm::radians(rotate_arms.z), glm::vec3(0.0, 0.0, 1.0));
 		*TR = glm::translate(*TR, glm::vec3(0.0f, 0.25f, 0.0f));
 		*TR = glm::scale(*TR, glm::vec3(0.15, 0.5f, 0.15f));
 		break;
-	case 6://¿À¸¥ÂÊÅ©·¹ÀÎ
+	case 6://Å©
 		*TR = glm::rotate(*TR, glm::radians(rotate_mid_body.y), glm::vec3(0.0, 1.0, 0.0));
 		*TR = glm::translate(*TR, glm::vec3(-0.2f, 0.25f, 0.0f));
 		*TR = glm::rotate(*TR, glm::radians(-rotate_arms.z), glm::vec3(0.0, 0.0, 1.0));
@@ -567,131 +613,60 @@ GLvoid TimerFunction1(int value)
 		}
 	}
 
+	if (light_rotate) {
+		light_rotate_angle += light_rotate_speed;
+		if (light_rotate_angle >= 360.0f) light_rotate_angle -= 360.0f;
+		if (light_rotate_angle < 0.0f) light_rotate_angle += 360.0f;
+	}
+
 	glutTimerFunc(10, TimerFunction1, 1);
 }
 
 GLvoid Keyboard(unsigned char key, int x, int y)
 {
-	vector<int> new_opnenface = {};
 	switch (key) {
-	case 'h':
-		isCulling = 1 - isCulling;
+	case 'm':  // ì¡°ëª… ì¼œê¸°/ë„ê¸°
+		if (light_color == glm::vec3(0.0f))
+			light_color = glm::vec3(1.0f);
+		else
+			light_color = glm::vec3(0.0f);
 		break;
-	case 'y':
-		world_rotate_y = !world_rotate_y;
-		world_y_seta = 0.5f;
+	case 'c':  // ì¡°ëª… ìƒ‰ìƒ ëœë¤ ë³€ê²½
+		light_color = glm::vec3(rand_color(eng), rand_color(eng), rand_color(eng));
 		break;
-	case 'Y':
-		world_rotate_y = !world_rotate_y;
-		world_y_seta = -0.5f;
+	case 'y':  // ì¡°ëª… ê³µì „ ì‹œì‘ (ì–‘ë°©í–¥)
+		light_rotate = true;
+		light_rotate_speed = 1.0f;
 		break;
-	case 'r':
-		camera_rotate_y = !camera_rotate_y;
-		camera_y_seta = 0.5f;
+	case 'Y':  // ì¡°ëª… ê³µì „ ì‹œì‘ (ìŒë°©í–¥)
+		light_rotate = true;
+		light_rotate_speed = -1.0f;
 		break;
-	case 'R':
-		camera_rotate_y = !camera_rotate_y;
-		camera_y_seta = -0.5f;
+	case 's':  // ëª¨ë“  íšŒì „ ì •ì§€
+		light_rotate = false;
+		camera_rotate_y = false;
 		break;
-	case 'a':
-		camera_rotate_all = !camera_rotate_all;
-		break;
-	case 'p':
-		isortho = !isortho;
-		break;
-	case 'z':
+	case 'z':  // ì¹´ë©”ë¼ zì¶• ì´ë™
 		cameraPos.z += 0.1f;
 		break;
 	case 'Z':
 		cameraPos.z -= 0.1f;
 		break;
-	case 'x':
+	case 'x':  // ì¹´ë©”ë¼ xì¶• ì´ë™
 		cameraPos.x += 0.1f;
 		break;
 	case 'X':
 		cameraPos.x -= 0.1f;
 		break;
-
-	case 'b':
-		if (trans_down_body.x < 10.0f && trans_down_body.x > -10.0f)
-		{
-			trans_down_body.x += 0.1f;
-		}
-		break;
-	case 'B':
-		if (trans_down_body.x < 10.0f && trans_down_body.x > -10.0f)
-		{
-			trans_down_body.x -= 0.1f;
-		}
-		break;
-	case 'm':
-		rotate_mid = !rotate_mid;
-		rotate_mid_seta = 0.5f;
-		break;
-	case 'M':
-		rotate_mid = !rotate_mid;
-		rotate_mid_seta = -0.5f;
-		break;
-	case 'f':
-		rotate_barrel = !rotate_barrel;
-		rotate_barrel_seta = 0.5f;
-		break;
-	case 'F':
-		rotate_barrel = !rotate_barrel;
-		rotate_barrel_seta = -0.5f;
-		break;
-
-	case 'e':
-		make_barrel_one = !make_barrel_one;
-		break;
-	case 't':
-		rotate_arms_bool = !rotate_arms_bool;
-		rotate_arm_seta = 0.5f;
-		break;
-	case 'T':
-		rotate_arms_bool = !rotate_arms_bool;
-		rotate_arm_seta = -0.5f;
-		break;
-	case 's':
-		camera_rotate_y = false;
-		world_rotate_y = false;
-		camera_rotate_all = false;
-		rotate_mid = false;
-		rotate_barrel = false;
-		rotate_arms_bool = false;
-		make_barrel_one = false;
-		break;
-	case 'c':
-		world_rotate = { 0.0,0.0,0.0 };
-		world_rotate_y = false;
-		isortho = false;
-
-		trans_down_body = { 0.0f,0.0f,0.0f };
-		rotate_mid_body = { 0.0f,0.0f,0.0f };
-		rotate_mid = false;
-		rotate_mid_seta = 1.0f;
-
-		rotate_barrel_body = { 0.0f,0.0f,0.0f };
-		rotate_barrel = false;
-		rotate_barrel_seta = 1.0f;
-
-		barrel_trans_mid = 0.5f;
-		make_barrel_one = false;
-
-		rotate_arms = { 0.0f,0.0f,0.0f };
-		rotate_arms_bool = false;
-		rotate_arm_seta = 0.5f;
-
-		cameraPos = { -1.0f,1.0f,1.0f };
-		camera_rotate = { 0.0f,0.0f,0.0f };
-		camera_rotate_y = false;
+	case 'r':  // ì¹´ë©”ë¼ yì¶• ê³µì „ (ì–‘ë°©í–¥)
+		camera_rotate_y = !camera_rotate_y;
 		camera_y_seta = 0.5f;
-		camera_rotate_all = false;
-
-		cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		break;
-	case 'q':
+	case 'R':  // ì¹´ë©”ë¼ yì¶• ê³µì „ (ìŒë°©í–¥)
+		camera_rotate_y = !camera_rotate_y;
+		camera_y_seta = -0.5f;
+		break;
+	case 'q':  // í”„ë¡œê·¸ë¨ ì¢…ë£Œ
 		glutLeaveMainLoop();
 		break;
 	}
@@ -700,14 +675,14 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 
 int main(int argc, char** argv)
 {
-	//À©µµ¿ì »ı¼º
+	// 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(WIN_X, WIN_Y);
 	glutInitWindowSize(WIN_W, WIN_H);
 	glutCreateWindow("Example1");
 
-	//GLEW ÃÊ±âÈ­ÇÏ±â
+	//GLEW Ê±È­Ï±
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
 	{
@@ -718,12 +693,12 @@ int main(int argc, char** argv)
 		std::cout << "GLEW Initialized\n";
 
 	if (!Make_Shader_Program()) {
-		cerr << "Error: Shader Program »ı¼º ½ÇÆĞ" << endl;
+		cerr << "Error: Shader Program  " << endl;
 		std::exit(EXIT_FAILURE);
 	}
 
 	if (!Set_VAO()) {
-		cerr << "Error: VAO »ı¼º ½ÇÆĞ" << endl;
+		cerr << "Error: VAO  " << endl;
 		std::exit(EXIT_FAILURE);
 	}
 	glutTimerFunc(10, TimerFunction1, 1);

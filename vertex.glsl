@@ -15,13 +15,11 @@ out vec3 passColorAttribute;
 
 void main()
 {
-    // 월드 공간에서의 위치 계산
     vec4 worldPos = transform * vec4(positionAttribute, 1.0);
-    // 뷰 공간에서의 위치 계산
     vec4 viewPos = viewTransform * worldPos;
     FragPos = viewPos.xyz;
     
-    // 노말 변환 행렬 계산 (transpose(inverse(mat3(viewTransform * transform))))
+    // 노말 변환 행렬 계산
     mat3 normalMatrix = mat3(transpose(inverse(viewTransform * transform)));
     Normal = normalize(normalMatrix * normalAttribute);
     
