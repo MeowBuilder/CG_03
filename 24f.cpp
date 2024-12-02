@@ -2,9 +2,9 @@
 #include <GL/freeglut.h>
 #include <GL/freeglut_ext.h>
 
-#include <glm.hpp>
-#include <ext.hpp>
-#include <gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
 #include <random>

@@ -2,9 +2,9 @@
 #include <GL/freeglut.h>
 #include <GL/freeglut_ext.h>
 
-#include <glm.hpp>
-#include <ext.hpp>
-#include <gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
 #include <random>
@@ -72,12 +72,12 @@ std::vector<glm::vec3> colors = { {1.0,0.0,0.0}, {0.5,0.5,0.0}, {0.0,1.0,0.0}, {
 bool light_on = true;
 bool light_rotate = false;
 float light_rotate_angle = 0.0f;
-float light_rotate_speed = 1.0f;  // 양수: 시계 방향, 음수: 반시계 방향
-float light_orbit_radius = 3.0f;  // 공전 반지름
+float light_rotate_speed = 1.0f;  // : 챨, : 阜챨
+float light_orbit_radius = 3.0f;  // 
 
-const float LIGHT_DISTANCE_CHANGE = 0.1f;  // 한 번에 변경될 거리
-const float MIN_LIGHT_DISTANCE = 1.0f;     // 최소 거리
-const float MAX_LIGHT_DISTANCE = 5.0f;     // 최대 거리
+const float LIGHT_DISTANCE_CHANGE = 0.1f;  // 
+const float MIN_LIGHT_DISTANCE = 1.0f;     // 玲 타
+const float MAX_LIGHT_DISTANCE = 5.0f;     // 獵 타
 
 std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
 
@@ -93,7 +93,7 @@ char* File_To_Buf(const char* file)
 	ifstream in(file, ios_base::binary);
 
 	if (!in) {
-		cerr << file << "파일 못찾음";
+		cerr << file << "찾";
 		exit(1);
 	}
 
@@ -119,7 +119,7 @@ bool  Load_Object(const char* path) {
 
 	ifstream in(path);
 	if (!in) {
-		cerr << path << "파일 못 찾음";
+		cerr << path << " 찾";
 		exit(1);
 	}
 
@@ -163,11 +163,11 @@ bool  Load_Object(const char* path) {
 bool Set_VAO() {
 	Load_Object("cube.obj");
 
-	// 큐브 VAO 설정
+	// 큐 VAO 
 	glGenVertexArrays(1, &cube_VAO);
 	glBindVertexArray(cube_VAO);
 
-	// 위치 버퍼
+	// 치 
 	glGenBuffers(1, &cube_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
@@ -176,7 +176,7 @@ bool Set_VAO() {
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(positionAttribute);
 
-	// 노말 계산 및 설정
+	// 釉�  
 	std::vector<glm::vec3> calculated_normals(vertices.size(), glm::vec3(0.0f));
 	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
 		unsigned int idx1 = vertexIndices[i];
@@ -192,7 +192,7 @@ bool Set_VAO() {
 		calculated_normals[idx3] += normal;
 	}
 
-	// 노말 정규화
+	// 釉� 화
 	for (auto& normal : calculated_normals) {
 		normal = glm::normalize(normal);
 	}
@@ -205,7 +205,7 @@ bool Set_VAO() {
 	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(normalAttribute);
 
-	// 인덱스 버퍼
+	// 琯 
 	glGenBuffers(1, &cube_EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
@@ -216,64 +216,64 @@ bool Set_VAO() {
 }
 
 bool Make_Shader_Program() {
-	//세이더 코드 파일 불러오기
+	//甄 湄 念
 	const GLchar* vertexShaderSource = File_To_Buf("vertex.glsl");
 	const GLchar* fragmentShaderSource = File_To_Buf("fragment.glsl");
 
-	//세이더 객체 만들기
+	//甄 체 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	//세이더 객체에 세이더 코드 붙이기
+	//甄 체 甄 湄 堅
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	//세이더 객체 컴파일하기
+	//甄 체 歐
 	glCompileShader(vertexShader);
 
 	GLint result;
 	GLchar errorLog[512];
 
-	//세이더 상태 가져오기
+	//甄 
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
 	if (!result)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-		cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << endl;
+		cerr << "ERROR: vertex shader  " << errorLog << endl;
 		return false;
 	}
 
-	//세이더 객체 만들기
+	//甄 체 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	//세이더 객체에 세이더 코드 붙이기
+	//甄 체 甄 湄 堅
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	//세이더 객체 컴파일하기
+	//甄 체 歐
 	glCompileShader(fragmentShader);
-	//세이더 상태 가져오기
+	//甄 
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
 	if (!result)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-		cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << endl;
+		cerr << "ERROR: fragment shader  " << errorLog << endl;
 		return false;
 	}
 
-	//세이더 프로그램 생성
+	//甄 慣瀏 
 	shaderProgramID = glCreateProgram();
-	//세이더 프로그램에 세이더 객체들을 붙이기
+	//甄 慣瀏 甄 체 堅
 	glAttachShader(shaderProgramID, vertexShader);
 	glAttachShader(shaderProgramID, fragmentShader);
-	//세이더 프로그램 링크
+	//甄 慣瀏 크
 	glLinkProgram(shaderProgramID);
 
-	//세이더 객체 삭제하기
+	//甄 체 歐
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
-	//프로그램 상태 가져오기
+	//慣瀏 
 	glGetProgramiv(shaderProgramID, GL_LINK_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(shaderProgramID, 512, NULL, errorLog);
-		cerr << "ERROR: shader program 연결 실패\n" << errorLog << endl;
+		cerr << "ERROR: shader program  " << errorLog << endl;
 		return false;
 	}
-	//세이더 프로그램 활성화
+	//甄 慣瀏 활화
 	glUseProgram(shaderProgramID);
 
 	return true;
@@ -327,22 +327,43 @@ GLvoid drawScene()
 
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 
+	//  (체 회構)
+	glm::vec3 rotated_light_pos = glm::vec3(
+		light_orbit_radius * cos(glm::radians(light_rotate_angle)),
+		0.0f,
+		light_orbit_radius * sin(glm::radians(light_rotate_angle))
+	);
+
+	// 큐 
+	glBindVertexArray(cube_VAO);
+	glm::mat4 light_TR = glm::mat4(1.0f);
+	light_TR = glm::translate(light_TR, rotated_light_pos);
+	light_TR = glm::scale(light_TR, glm::vec3(0.2f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(light_TR));
+	glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+
+	//  ( 환)
+	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
+	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
+	glUniform3f(lightColorLocation, light_color.x, light_color.y, light_color.z);
+
 	glm::mat4 TR = glm::mat4(1.0f);
 
-	//태양
+	//쩐
 	TR = glm::mat4(1.0f);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, 1.0, 1.0, 0.0);
 	gluSphere(Sun, 0.5, 50, 50);
 
-	//행성1
+	//善�1
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet1_translate);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[0].x, colors[0].y, colors[0].z);
 	gluSphere(planet1, 0.25, 25, 25);
 
-	//위성1
+	//1
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet1_translate);
 	TR = glm::rotate(TR, glm::radians(moon1_rotate.y), glm::vec3(0.0, 1.0, 0.0));
@@ -352,14 +373,14 @@ GLvoid drawScene()
 	gluSphere(moon1, 0.1, 10, 10);
 
 
-	//행성2
+	//善�2
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet2_translate);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[2].x, colors[2].y, colors[2].z);
 	gluSphere(planet2, 0.25, 25, 25);
 
-	//위성2
+	//2
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet2_translate);
 	TR = glm::rotate(TR, glm::radians(moon2_rotate.y), glm::vec3(0.0, 1.0, 0.0));
@@ -368,14 +389,14 @@ GLvoid drawScene()
 	glUniform3f(colorLocation, colors[3].x, colors[3].y, colors[3].z);
 	gluSphere(moon2, 0.1, 10, 10);
 
-	//행성3
+	//善�3
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet3_translate);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[4].x, colors[4].y, colors[4].z);
 	gluSphere(planet3, 0.25, 25, 25);
 
-	//위성3
+	//3
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet3_translate);
 	TR = glm::rotate(TR, glm::radians(moon3_rotate.y), glm::vec3(0.0, 1.0, 0.0));
@@ -384,26 +405,7 @@ GLvoid drawScene()
 	glUniform3f(colorLocation, colors[5].x, colors[5].y, colors[5].z);
 	gluSphere(moon3, 0.1, 10, 10);
 
-	// 조명 위치 계산 (물체 회전과 무관하게)
-	glm::vec3 rotated_light_pos = glm::vec3(
-		light_orbit_radius * cos(glm::radians(light_rotate_angle)),
-		0.0f,
-		light_orbit_radius * sin(glm::radians(light_rotate_angle))
-	);
 
-	// 조명 큐브 그리기
-	glBindVertexArray(cube_VAO);
-	glm::mat4 light_TR = glm::mat4(1.0f);
-	light_TR = glm::translate(light_TR, rotated_light_pos);
-	light_TR = glm::scale(light_TR, glm::vec3(0.2f));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(light_TR));
-	glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
-
-	// 조명 위치 업데이트 (뷰 공간으로 변환)
-	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
-	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
-	glUniform3f(lightColorLocation, light_color.x, light_color.y, light_color.z);
 
 	glutSwapBuffers();
 }
@@ -431,6 +433,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	vector<int> new_opnenface = {};
 	switch (key) {
+	case 'm':
+		light_color = glm::vec3(0);
+		break;
 	case 'c':
 		light_color = glm::vec3(rand_color(eng), rand_color(eng), rand_color(eng));
 		break;
@@ -468,30 +473,6 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case 'q':
 		glutLeaveMainLoop();
 		break;
-	case 'p': //직각 / 원근투영
-		isortho = !isortho;
-		break;
-	case 'm':
-		isSolid = !isSolid;
-		break;
-	case 'w':
-		translate_all.y += 0.1f;
-		break;
-	case 'a':
-		translate_all.x -= 0.1f;
-		break;
-	case 's':
-		translate_all.y -= 0.1f;
-		break;
-	case 'd':
-		translate_all.x += 0.1f;
-		break;
-	case '+':
-		translate_all.z += 0.1f;
-		break;
-	case '-':
-		translate_all.z -= 0.1f;
-		break;
 	};
 	glutPostRedisplay();
 }
@@ -506,14 +487,14 @@ GLvoid specialKeyboard(int key, int x, int y) {
 
 int main(int argc, char** argv)
 {
-	//윈도우 생성
+	// 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(WIN_X, WIN_Y);
 	glutInitWindowSize(WIN_W, WIN_H);
 	glutCreateWindow("Example1");
 
-	//GLEW 초기화하기
+	//GLEW 珂화歐
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
 	{
@@ -524,7 +505,7 @@ int main(int argc, char** argv)
 		std::cout << "GLEW Initialized\n";
 
 	if (!Make_Shader_Program()) {
-		cerr << "Error: Shader Program 생성 실패" << endl;
+		cerr << "Error: Shader Program  " << endl;
 		std::exit(EXIT_FAILURE);
 	}
 
