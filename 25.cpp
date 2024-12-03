@@ -85,7 +85,8 @@ std::vector< glm::vec3 > vertices;
 std::vector< glm::vec2 > uvs;
 std::vector< glm::vec3 > normals;
 
-GLuint cube_VAO, cube_VBO, cube_EBO, cube_VBO_n, cube_EBO_n;
+GLuint cube_VAO, cube_VBO, cube_EBO;
+GLuint sphearVAO, sphearVBO, sphearEBO;
 
 glm::vec3 light_color = glm::vec3(1.0);
 char* File_To_Buf(const char* file)
@@ -160,23 +161,40 @@ bool  Load_Object(const char* path) {
 	return true;
 }
 
-bool Set_VAO() {
-	Load_Object("cube.obj");
+bool Set_Sphere() {
+	Load_Object("sphere.obj");
+	glGenVertexArrays(1, &sphearVAO);
+	//VAO εѴ.
+	glBindVertexArray(sphearVAO);
 
-	// ť VAO 
-	glGenVertexArrays(1, &cube_VAO);
-	glBindVertexArray(cube_VAO);
+	//Vertex Buffer Object(VBO) Ͽ vertex ͸ Ѵ.
 
-	// ġ 
-	glGenBuffers(1, &cube_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO);
+	//ؽ Ʈ (VBO) ̸
+	glGenBuffers(1, &sphearVBO);
+	// Ʈ εѴ.
+	glBindBuffer(GL_ARRAY_BUFFER, sphearVBO);
+	// Ʈ ͸
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
+	//Ʈ Ʈ (EBO) ̸
+	glGenBuffers(1, &sphearEBO);
+	// Ʈ εѴ.
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphearEBO);
+	// Ʈ ͸
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
+
+	//ġ Լ
 	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
+	if (positionAttribute == -1) {
+		cerr << "position Ӽ  " << endl;
+		return false;
+	}
+	//ؽ Ӽ  Ʈ 
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	//ؽ Ӽ  Ʈ ϵѴ.
 	glEnableVertexAttribArray(positionAttribute);
 
-	// 븻  
+	// 노말 계산 및 설정
 	std::vector<glm::vec3> calculated_normals(vertices.size(), glm::vec3(0.0f));
 	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
 		unsigned int idx1 = vertexIndices[i];
@@ -192,23 +210,89 @@ bool Set_VAO() {
 		calculated_normals[idx3] += normal;
 	}
 
-	// 븻 ȭ
+	// 노말 정규화
 	for (auto& normal : calculated_normals) {
 		normal = glm::normalize(normal);
 	}
 
-	glGenBuffers(1, &cube_VBO_n);
-	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO_n);
+	// 노말 버퍼 생성 및 설정
+	GLuint normalVBO;
+	glGenBuffers(1, &normalVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
 	glBufferData(GL_ARRAY_BUFFER, calculated_normals.size() * sizeof(glm::vec3), &calculated_normals[0], GL_STATIC_DRAW);
 
 	GLint normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
 	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(normalAttribute);
 
-	// ε 
+	glBindVertexArray(0);
+
+	return true;
+}
+
+bool Set_VAO() {
+	Load_Object("cube.obj");
+	glGenVertexArrays(1, &cube_VAO);
+	//VAO εѴ.
+	glBindVertexArray(cube_VAO);
+
+	//Vertex Buffer Object(VBO) Ͽ vertex ͸ Ѵ.
+
+	//ؽ Ʈ (VBO) ̸
+	glGenBuffers(1, &cube_VBO);
+	// Ʈ εѴ.
+	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO);
+	// Ʈ ͸
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+
+	//Ʈ Ʈ (EBO) ̸
 	glGenBuffers(1, &cube_EBO);
+	// Ʈ εѴ.
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_EBO);
+	// Ʈ ͸
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
+
+	//ġ Լ
+	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
+	if (positionAttribute == -1) {
+		cerr << "position Ӽ  " << endl;
+		return false;
+	}
+	//ؽ Ӽ  Ʈ 
+	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	//ؽ Ӽ  Ʈ ϵѴ.
+	glEnableVertexAttribArray(positionAttribute);
+
+	// 노말 계산 및 설정
+	std::vector<glm::vec3> calculated_normals(vertices.size(), glm::vec3(0.0f));
+	for (size_t i = 0; i < vertexIndices.size(); i += 3) {
+		unsigned int idx1 = vertexIndices[i];
+		unsigned int idx2 = vertexIndices[i + 1];
+		unsigned int idx3 = vertexIndices[i + 2];
+
+		glm::vec3 v1 = vertices[idx2] - vertices[idx1];
+		glm::vec3 v2 = vertices[idx3] - vertices[idx1];
+		glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
+
+		calculated_normals[idx1] += normal;
+		calculated_normals[idx2] += normal;
+		calculated_normals[idx3] += normal;
+	}
+
+	// 노말 정규화
+	for (auto& normal : calculated_normals) {
+		normal = glm::normalize(normal);
+	}
+
+	// 노말 버퍼 생성 및 설정
+	GLuint normalVBO;
+	glGenBuffers(1, &normalVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+	glBufferData(GL_ARRAY_BUFFER, calculated_normals.size() * sizeof(glm::vec3), &calculated_normals[0], GL_STATIC_DRAW);
+
+	GLint normalAttribute = glGetAttribLocation(shaderProgramID, "normalAttribute");
+	glVertexAttribPointer(normalAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(normalAttribute);
 
 	glBindVertexArray(0);
 

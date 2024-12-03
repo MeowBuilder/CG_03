@@ -223,8 +223,6 @@ bool Make_Shader_Program() {
 }
 
 bool Set_VAO() {
-	//ﰢϴ vertex  - position color
-
 	Load_Object("cube.obj");
 
 	glGenVertexArrays(1, &Line_VAO);
