@@ -23,26 +23,11 @@ const int WIN_W = 800, WIN_H = 800;
 
 const glm::vec3 background_rgb = glm::vec3(0, 0, 0);
 
-GLUquadricObj* Sun;
-
-GLUquadricObj* planet1;
-GLUquadricObj* moon1;
 glm::vec3 planet1_translate = { 1.0f,0.0f,0.0f };
-glm::vec3 planet1_rotate;
-glm::vec3 moon1_rotate;
 
-GLUquadricObj* planet2;
-GLUquadricObj* moon2;
 glm::vec3 planet2_translate = { 1.5f,0.0f,0.0f };
-glm::vec3 planet2_rotate;
-glm::vec3 moon2_rotate;
 
-GLUquadricObj* planet3;
-GLUquadricObj* moon3;
 glm::vec3 planet3_translate = { -1.5f,0.0f,0.0f };
-glm::vec3 planet3_rotate = { 0.0f,0.0f,0.0f };
-glm::vec3 moon3_rotate;
-
 float radius = 2.0f;
 
 bool isCulling = true;
@@ -380,14 +365,6 @@ GLvoid drawScene()
 	isCulling ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	isSolid ? gluQuadricDrawStyle(Sun, GLU_FILL) : gluQuadricDrawStyle(Sun, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(planet1, GLU_FILL) : gluQuadricDrawStyle(planet1, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(moon1, GLU_FILL) : gluQuadricDrawStyle(moon1, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(planet2, GLU_FILL) : gluQuadricDrawStyle(planet2, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(moon2, GLU_FILL) : gluQuadricDrawStyle(moon2, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(planet3, GLU_FILL) : gluQuadricDrawStyle(planet3, GLU_LINE);
-	isSolid ? gluQuadricDrawStyle(moon3, GLU_FILL) : gluQuadricDrawStyle(moon3, GLU_LINE);
-
 	glUseProgram(shaderProgramID);
 	unsigned viewLocation = glGetUniformLocation(shaderProgramID, "viewTransform");
 	unsigned int projectionLocation = glGetUniformLocation(shaderProgramID, "projectionTransform");
@@ -396,6 +373,7 @@ GLvoid drawScene()
 	unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightcolor");
 	unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos");
 
+	unsigned int viewPos = glGetUniformLocation(shaderProgramID, "viewPos");
 
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -410,6 +388,7 @@ GLvoid drawScene()
 	projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0));
 
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
+	glUniform3f(viewPos, cameraPos.x, cameraPos.y, cameraPos.z);
 
 	//  (ü ȸϰ)
 	glm::vec3 rotated_light_pos = glm::vec3(
@@ -427,67 +406,70 @@ GLvoid drawScene()
 	glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
 
-	//  ( ȯ)
 	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
 	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
 	glUniform3f(lightColorLocation, light_color.x, light_color.y, light_color.z);
 
 	glm::mat4 TR = glm::mat4(1.0f);
 
-	//¾
+	glBindVertexArray(sphearVAO);
 	TR = glm::mat4(1.0f);
+	TR = glm::scale(TR, glm::vec3(0.25, 0.25, 0.25));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, 1.0, 1.0, 0.0);
-	gluSphere(Sun, 0.5, 50, 50);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 	//༺1
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet1_translate);
+	TR = glm::scale(TR, glm::vec3(0.1, 0.1, 0.1));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[0].x, colors[0].y, colors[0].z);
-	gluSphere(planet1, 0.25, 25, 25);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 	//1
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet1_translate);
-	TR = glm::rotate(TR, glm::radians(moon1_rotate.y), glm::vec3(0.0, 1.0, 0.0));
 	TR = glm::translate(TR, glm::vec3(0.4, 0.0, 0.0));
+	TR = glm::scale(TR, glm::vec3(0.05, 0.05, 0.05));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[1].x, colors[1].y, colors[1].z);
-	gluSphere(moon1, 0.1, 10, 10);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 
 	//༺2
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet2_translate);
+	TR = glm::scale(TR, glm::vec3(0.1, 0.1, 0.1));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[2].x, colors[2].y, colors[2].z);
-	gluSphere(planet2, 0.25, 25, 25);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 	//2
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet2_translate);
-	TR = glm::rotate(TR, glm::radians(moon2_rotate.y), glm::vec3(0.0, 1.0, 0.0));
 	TR = glm::translate(TR, glm::vec3(0.4, 0.0, 0.0));
+	TR = glm::scale(TR, glm::vec3(0.05, 0.05, 0.05));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[3].x, colors[3].y, colors[3].z);
-	gluSphere(moon2, 0.1, 10, 10);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 	//༺3
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet3_translate);
+	TR = glm::scale(TR, glm::vec3(0.1, 0.1, 0.1));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[4].x, colors[4].y, colors[4].z);
-	gluSphere(planet3, 0.25, 25, 25);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 	//3
 	TR = glm::mat4(1.0f);
 	TR = glm::translate(TR, planet3_translate);
-	TR = glm::rotate(TR, glm::radians(moon3_rotate.y), glm::vec3(0.0, 1.0, 0.0));
 	TR = glm::translate(TR, glm::vec3(0.4, 0.0, 0.0));
+	TR = glm::scale(TR, glm::vec3(0.05, 0.05, 0.05));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 	glUniform3f(colorLocation, colors[5].x, colors[5].y, colors[5].z);
-	gluSphere(moon3, 0.1, 10, 10);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 
 
 
@@ -594,40 +576,9 @@ int main(int argc, char** argv)
 	}
 
 	Set_VAO();
+	Set_Sphere();
 
 	glutTimerFunc(10, TimerFunction1, 1);
-
-	Sun = gluNewQuadric();
-	gluQuadricNormals(Sun, GLU_SMOOTH);
-	gluQuadricOrientation(Sun, GLU_OUTSIDE);
-
-
-	planet1 = gluNewQuadric();
-	gluQuadricNormals(planet1, GLU_SMOOTH);
-	gluQuadricOrientation(planet1, GLU_OUTSIDE);
-
-
-	moon1 = gluNewQuadric();
-	gluQuadricNormals(moon1, GLU_SMOOTH);
-	gluQuadricOrientation(moon1, GLU_OUTSIDE);
-
-
-	planet2 = gluNewQuadric();
-	gluQuadricNormals(planet2, GLU_SMOOTH);
-	gluQuadricOrientation(planet2, GLU_OUTSIDE);
-
-	moon2 = gluNewQuadric();
-	gluQuadricNormals(moon2, GLU_SMOOTH);
-	gluQuadricOrientation(moon2, GLU_OUTSIDE);
-
-	planet3 = gluNewQuadric();
-	gluQuadricNormals(planet3, GLU_SMOOTH);
-	gluQuadricOrientation(planet3, GLU_OUTSIDE);
-
-
-	moon3 = gluNewQuadric();
-	gluQuadricNormals(moon3, GLU_SMOOTH);
-	gluQuadricOrientation(moon3, GLU_OUTSIDE);
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
