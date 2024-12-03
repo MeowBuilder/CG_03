@@ -19,7 +19,6 @@ void main()
     vec4 viewPos = viewTransform * worldPos;
     FragPos = viewPos.xyz;
     
-    // 노말 변환 행렬 계산
     mat3 normalMatrix = mat3(transpose(inverse(viewTransform * transform)));
     Normal = normalize(normalMatrix * normalAttribute);
     
