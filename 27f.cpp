@@ -70,6 +70,16 @@ struct Snowflake {
     float size;  // 추가된 크기 변수
 };
 
+struct planet {
+	glm::vec3 position;
+	glm::vec3 color;
+	float size;
+};
+
+std::vector<planet> planets;
+float rotation = 0.0f;
+float radius = 5.0f;
+
 const int SNOW_COUNT = 200;  // 눈송이 개수
 std::vector<Snowflake> snowflakes;
 const float SNOW_AREA = 20.0f;  // 눈이 내리는 영역의 크기
@@ -83,7 +93,7 @@ bool camera_rotate = false;  // 카메라 회전 상태
 float camera_angle = 0.0f;   // 카메라 회전 각도
 const float CAMERA_ROTATE_SPEED = 1.0f;  // 카메라 회전 속도
 
-float light_intensity = 1.0f;  // 조명 세기
+float light_intensity = 2.0f;  // 조명 세기
 
 int light_position_index = 0;  // 조명 위치 인덱스
 glm::vec3 light_positions[] = {
@@ -466,15 +476,11 @@ GLvoid drawScene()
 
 	unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightcolor");
 	unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos");
-	if (light_rotate) {
-		current_light_pos = glm::vec3(
-			light_orbit_radius * cos(glm::radians(light_rotate_angle)),
-			light_height,
-			light_orbit_radius * sin(glm::radians(light_rotate_angle))
-		);
-	} else {
-		current_light_pos = light_positions[light_position_index];
-	}
+	current_light_pos = glm::vec3(
+		light_orbit_radius * cos(glm::radians(light_rotate_angle)),
+		light_height,
+		light_orbit_radius * sin(glm::radians(light_rotate_angle))
+	);
 
 	// 조명과 객체 사이의 방향 벡터 계산
 	glm::vec3 object_center(0.0f, 1.0f, 0.0f);  // 피라미드의 중심점
@@ -521,6 +527,16 @@ GLvoid drawScene()
 		glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
 	}
 
+	for (const auto& planet : planets) {
+		glm::mat4 planet_TR = glm::mat4(1.0f);
+		planet_TR = glm::translate(planet_TR, planet.position);
+		planet_TR = glm::scale(planet_TR, glm::vec3(planet.size));
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(planet_TR));
+		glUniform3f(colorLocation, planet.color.x, planet.color.y, planet.color.z);
+		glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, (void*)0);
+	}
+
+
 	glutSwapBuffers();
 }
 
@@ -561,7 +577,22 @@ GLvoid TimerFunction1(int value)
 			snow.speed = rand_speed(eng);
 		}
 	}
-
+	rotation += 1.0f;
+	planets[0].position = glm::vec3{
+				0,
+				cos(glm::radians(rotation)) * radius,
+				sin(glm::radians(rotation)) * radius
+	};
+	planets[1].position = glm::vec3{
+				cos(glm::radians(rotation)) * radius,
+				cos(glm::radians(rotation)) * radius,
+				sin(glm::radians(rotation)) * radius
+	};
+	planets[2].position = glm::vec3{
+				-cos(glm::radians(rotation)) * radius,
+				cos(glm::radians(rotation)) * radius,
+				sin(glm::radians(rotation)) * radius
+	};
 	glutTimerFunc(10, TimerFunction1, 1);
 }
 
@@ -610,19 +641,13 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		camera_rotate = !camera_rotate;
 		break;
 	case 'n':  // 조명이 객체에 가까워지기
-		current_light_pos += direction_to_object * 0.5f;  // 객체 방향으로 이동
-		if (!light_rotate) {
-			light_positions[light_position_index] = current_light_pos;
-		}
+		light_orbit_radius = max(0.1f, light_orbit_radius - 0.1f);
 		break;
 	case 'f':  // 조명이 객체에서 멀어지기
-		current_light_pos -= direction_to_object * 0.5f;  // 객체 반대 방향으로 이동
-		if (!light_rotate) {
-			light_positions[light_position_index] = current_light_pos;
-		}
+		light_orbit_radius = min(10.0f,light_orbit_radius + 0.1f);
 		break;
 	case '+':  // 조명 세기 높이기
-		light_intensity = min(2.0f, light_intensity + 0.1f);
+		light_intensity = min(5.0f, light_intensity + 0.1f);
 		break;
 	case '-':  // 조명 세기 낮추기
 		light_intensity = max(0.0f, light_intensity - 0.1f);
@@ -680,6 +705,19 @@ int main(int argc, char** argv)
 		snow.size = rand_size(eng);  // 랜덤 크기 설정
 		snow.active = true;
 	}
+
+	planets.resize(3);
+	planets[0].color = glm::vec3(1, 0, 0);
+	planets[0].position = glm::vec3(0, 5, 0);
+	planets[0].size = 0.5f;
+
+	planets[1].color = glm::vec3(0, 1, 0);
+	planets[1].position = glm::vec3(-5, 5, 0);
+	planets[1].size = 0.2f;
+
+	planets[2].color = glm::vec3(0, 0, 1);
+	planets[2].position = glm::vec3(5, 5, 0);
+	planets[2].size = 0.1f;
 
 	glutTimerFunc(10, TimerFunction1, 1);
 

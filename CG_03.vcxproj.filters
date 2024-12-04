@@ -18,13 +18,16 @@
     <ClCompile Include="24f.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="25.cpp">
+    <ClCompile Include="25f.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="26.cpp">
+    <ClCompile Include="26f.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="27.cpp">
+    <ClCompile Include="27f.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="29.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

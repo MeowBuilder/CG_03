@@ -10,6 +10,8 @@ uniform vec3 lightPos;
 uniform vec3 lightcolor;
 uniform vec3 colorAttribute;
 
+uniform sampler2D outTexture;
+
 void main()
 {
     // 조명 계산
@@ -26,4 +28,5 @@ void main()
 
     vec3 result = (ambient + diffuse * attenuation) * colorAttribute;
     FragColor = vec4(result, 1.0);
+    FragColor = texture(outTexture, TexCoord) * FragColor;
 }

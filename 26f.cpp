@@ -419,7 +419,7 @@ GLvoid drawScene()
 	// 조명 위치를 뷰 공간으로 변환하여 셰이더에 전달
 	glm::vec4 viewLightPos = view * glm::vec4(rotated_light_pos, 1.0f);
 	glUniform3f(lightPosLocation, viewLightPos.x, viewLightPos.y, viewLightPos.z);
-	glUniform3f(lightColorLocation, light_color.x, light_color.y, light_color.z);
+	glUniform3f(lightColorLocation, light_color.x * 2.0, light_color.y * 2.0, light_color.z * 2.0);
 
 	glutSwapBuffers();
 }

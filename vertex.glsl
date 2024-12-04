@@ -6,9 +6,11 @@ uniform mat4 projectionTransform;
 
 layout (location = 0) in vec3 positionAttribute;
 layout (location = 1) in vec3 normalAttribute;
+layout (location = 2) in vec2 vTexCoord;
 
 out vec3 FragPos;
 out vec3 Normal;
+out vec2 TexCoord;
 
 uniform vec3 colorAttribute;
 out vec3 passColorAttribute;
@@ -24,4 +26,5 @@ void main()
     
     gl_Position = projectionTransform * viewPos;
     passColorAttribute = colorAttribute;
+    TexCoord = vTexCoord;
 }
