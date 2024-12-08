@@ -5,26 +5,15 @@ uniform mat4 viewTransform;
 uniform mat4 projectionTransform;
 
 layout (location = 0) in vec3 positionAttribute;
-layout (location = 1) in vec3 normalAttribute;
-layout (location = 2) in vec2 vTexCoord;
-
-out vec3 FragPos;
-out vec3 Normal;
-out vec2 TexCoord;
+layout (location = 1) in vec2 uvAttribute;
 
 uniform vec3 colorAttribute;
 out vec3 passColorAttribute;
+out vec2 passUV;
 
 void main()
 {
-    vec4 worldPos = transform * vec4(positionAttribute, 1.0);
-    vec4 viewPos = viewTransform * worldPos;
-    FragPos = viewPos.xyz;
-    
-    mat3 normalMatrix = mat3(transpose(inverse(viewTransform * transform)));
-    Normal = normalize(normalMatrix * normalAttribute);
-    
-    gl_Position = projectionTransform * viewPos;
-    passColorAttribute = colorAttribute;
-    TexCoord = vTexCoord;
-}
+	gl_Position = projectionTransform * viewTransform * transform * vec4(positionAttribute, 1.0);
+	passColorAttribute = colorAttribute;
+	passUV = uvAttribute;
+};
