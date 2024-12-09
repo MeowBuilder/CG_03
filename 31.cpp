@@ -61,6 +61,7 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 bool is_cube = true;
 
 unsigned int textureIDs[6];
+unsigned int sky_tex;
 
 char* File_To_Buf(const char* file)
 {
@@ -206,11 +207,32 @@ bool Load_Textures() {
 		unsigned char* data = stbi_load(textureFiles[i], &width, &height, &nrChannels, STBI_rgb);
 		if (data) {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		} else {
+		}
+		else {
 			cerr << "Failed to load texture: " << textureFiles[i] << endl;
 		}
 		stbi_image_free(data);
 	}
+
+	glGenTextures(1, &sky_tex);
+	int width, height, nrChannels;
+
+	glBindTexture(GL_TEXTURE_2D, sky_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	unsigned char* data = stbi_load("sky.png", &width, &height, &nrChannels, STBI_rgb);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	}
+	else {
+		cerr << "Failed to load texture: " << "sky.jpg" << endl;
+	}
+	stbi_image_free(data);
+	
+
 	return true;
 }
 
@@ -333,38 +355,58 @@ bool Set_VAO() {
 
 void Viewport1() {
 	glUseProgram(shaderProgramID);
-
-	glm::mat4 view = glm::mat4(1.0f);
-	view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 	unsigned viewLocation = glGetUniformLocation(shaderProgramID, "viewTransform");
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
-
-	glm::mat4 projection = glm::mat4(1.0f);
-	projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 50.0f);
-	projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0));
-
 	unsigned int projectionLocation = glGetUniformLocation(shaderProgramID, "projectionTransform");
-	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
-
-	glm::mat4 TR = glm::mat4(1.0f);
 	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
 	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
 
-	TR = glm::mat4(1.0f);
+	glDisable(GL_DEPTH_TEST);
+	glBindVertexArray(cube_VAO);
+
+	glm::mat4 bgProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(bgProjection));
+	
+	glm::mat4 bgView = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), 
+								  glm::vec3(0.0f, 0.0f, -1.0f), 
+								  glm::vec3(0.0f, 1.0f, 0.0f));
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(bgView));
+
+	glm::mat4 bgTR = glm::mat4(1.0f);
+	bgTR = glm::translate(bgTR, glm::vec3(0.0f, 0.0f, -2.0f));
+	bgTR = glm::scale(bgTR, glm::vec3(2.0f));
+
+	glUniform3f(colorLocation, 1, 1, 1);
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(bgTR));
+	glBindTexture(GL_TEXTURE_2D, sky_tex);
+	
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)(0));
+
+	glEnable(GL_DEPTH_TEST);
+	
+	glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 50.0f);
+	projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0));
+
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
+
+	glEnable(GL_DEPTH_TEST);
+
+	glm::mat4 TR = glm::mat4(1.0f);
 	TR = glm::rotate(TR, glm::radians(camera_rotate.y), glm::vec3(0.0, 1.0, 0.0));
 	TR = glm::rotate(TR, glm::radians(camera_rotate.x), glm::vec3(1.0, 0.0, 0.0));
 
-	glUniform3f(colorLocation, 1, 1, 1);
 	if (is_cube) {
 		glBindVertexArray(cube_VAO);
-		
+
 		for (int i = 0; i < 6; i++) {
 			glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 			glBindTexture(GL_TEXTURE_2D, textureIDs[i]);
 
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(i * 6 * sizeof(unsigned int)));
 		}
-	} else {
+	}
+	else {
 		glBindVertexArray(tet_VAO);
 		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
 
